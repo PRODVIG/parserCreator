@@ -133,28 +133,33 @@ function getVacancyInfo() {
         const experienceTitle = document.querySelector('[data-qa="resume-experience-block-title"] h2');
         let experienceText = experienceTitle ? experienceTitle.innerText.trim() + '\n\n' : '';
 
-        // Находим все блоки опыта работы
-        const experienceBlocks = document.querySelectorAll('[data-qa="resume-block-experience-position"]');
-        if (experienceBlocks.length > 0) {
-            const experienceDetails = Array.from(experienceBlocks).map(block => {
-                const position = block.innerText.trim();
+        // Находим все контейнеры опыта работы
+        const experienceContainers = document.querySelectorAll('.magritte-h-spacing-container___rrYJZ_2-0-58');
+        let experienceDetails = [];
 
-                // Ищем компанию (родительский элемент)
-                const companyElem = block.closest('.magritte-card___bhGKz_8-0-0')?.querySelector('[data-qa="resume-experience-company-title"]');
-                const company = companyElem ? companyElem.innerText.trim() : '';
+        experienceContainers.forEach(container => {
+            // Проверяем, есть ли в контейнере данные об опыте
+            const positionElem = container.querySelector('[data-qa="resume-block-experience-position"]');
+            const companyElem = container.querySelector('[data-qa="resume-experience-company-title"]');
+            const periodElem = container.querySelector('[data-qa="resume-experience-period"]');
+            const descriptionElem = container.querySelector('[data-qa="resume-block-experience-description"]');
 
-                // Ищем период работы
-                const periodElem = block.closest('.magritte-card___bhGKz_8-0-0')?.querySelector('[data-qa="resume-experience-period"]');
+            if (positionElem && companyElem) {
+                const position = positionElem.innerText.trim();
+                const company = companyElem.innerText.trim();
                 const period = periodElem ? periodElem.innerText.trim() : '';
+                const description = descriptionElem ? descriptionElem.innerText.trim() : '';
 
-                // Ищем описание работы
-                const descElem = block.closest('.magritte-card___bhGKz_8-0-0')?.querySelector('[data-qa="resume-block-experience-description"]');
-                const description = descElem ? descElem.innerText.trim() : '';
+                let experienceEntry = `${position} в ${company}`;
+                if (period) experienceEntry += `\n${period}`;
+                if (description) experienceEntry += `\n${description}`;
 
-                return `${position} в ${company}\n${period}\n${description}`;
-            }).join('\n\n');
+                experienceDetails.push(experienceEntry);
+            }
+        });
 
-            vacancy.experience = experienceText + experienceDetails;
+        if (experienceDetails.length > 0) {
+            vacancy.experience = experienceText + experienceDetails.join('\n\n');
         } else {
             vacancy.experience = experienceText || "";
         }
@@ -163,31 +168,41 @@ function getVacancyInfo() {
         const educationTitle = document.querySelector('[data-qa="resume-education-block-title"] h2');
         let educationText = educationTitle ? educationTitle.innerText.trim() + '\n\n' : '';
 
-        // Ищем все блоки образования в карточках
-        const educationCards = document.querySelectorAll('.magritte-card___bhGKz_8-0-0');
+        // Собираем высшее образование
         let educationDetails = [];
+        
+        // Ищем блок высшего образования
+        const educationBlock = document.querySelector('[data-qa="resume-education-block"]');
+        if (educationBlock) {
+            const institutionElem = educationBlock.querySelector('a span');
+            const specialtyElem = educationBlock.querySelector('.magritte-text_style-secondary___1IU11_4-0-0 span');
+            const yearElem = educationBlock.querySelector('.magritte-text_style-tertiary___ANX5P_4-0-0');
 
-        educationCards.forEach(card => {
-            // Проверяем, содержит ли карточка образовательную информацию
-            const levelText = card.querySelector('.magritte-text_style-secondary___1IU11_4-0-0');
-            if (levelText && (levelText.innerText.includes('Уровень') || levelText.innerText.includes('образование'))) {
-                // Это блок с высшим образованием
-                const institution = card.querySelector('span')?.innerText.trim();
-                const specialty = card.querySelectorAll('.magritte-text_style-secondary___1IU11_4-0-0 span')[0]?.innerText.trim();
-                const year = card.querySelector('.magritte-text_style-tertiary___ANX5P_4-0-0')?.innerText.trim();
+            if (institutionElem) {
+                let educationEntry = institutionElem.innerText.trim();
+                if (specialtyElem) educationEntry += `\n${specialtyElem.innerText.trim()}`;
+                if (yearElem) educationEntry += `\n${yearElem.innerText.trim()}`;
+                educationDetails.push(educationEntry);
+            }
+        }
 
-                if (institution) {
-                    educationDetails.push(`${institution}\n${specialty || ''}\n${year || ''}`);
-                }
-            } else {
-                // Проверяем, это ли курсы/дополнительное образование
-                const courseTitle = card.querySelector('.magritte-text_style-primary___AQ7MW_4-0-0 span')?.innerText.trim();
-                const courseOrg = card.querySelector('.magritte-text_style-secondary___1IU11_4-0-0 span')?.innerText.trim();
-                const courseYear = card.querySelector('.magritte-text_style-secondary___1IU11_4-0-0')?.innerText.trim();
+        // Собираем курсы повышения квалификации
+        const coursesTitle = document.querySelector('[data-qa="resume-education-courses-block-title"] h2');
+        if (coursesTitle) {
+            educationDetails.push(`\n${coursesTitle.innerText.trim()}`);
+        }
 
-                if (courseTitle && courseOrg && !courseTitle.includes('Опыт работы') && !courseTitle.includes('Языки')) {
-                    educationDetails.push(`Курс: ${courseTitle}\nОрганизация: ${courseOrg}\n${courseYear || ''}`);
-                }
+        const coursesBlocks = document.querySelectorAll('[data-qa="resume-education-courses-block"] .magritte-cell___NQYg5_6-0-1');
+        coursesBlocks.forEach(courseBlock => {
+            const courseNameElem = courseBlock.querySelector('.magritte-text_style-primary___AQ7MW_4-0-0 span');
+            const courseOrgElem = courseBlock.querySelector('.magritte-text_style-secondary___1IU11_4-0-0 span');
+            const courseYearElem = courseBlock.querySelector('.magritte-text_style-tertiary___ANX5P_4-0-0');
+
+            if (courseNameElem) {
+                let courseEntry = `Курс: ${courseNameElem.innerText.trim()}`;
+                if (courseOrgElem) courseEntry += `\nОрганизация: ${courseOrgElem.innerText.trim()}`;
+                if (courseYearElem) courseEntry += `\nГод: ${courseYearElem.innerText.trim()}`;
+                educationDetails.push(courseEntry);
             }
         });
 
@@ -368,13 +383,13 @@ function sendToBitrix(data = null) {
 
         try {
             console.log('=== НАЧАЛО ОБРАБОТКИ ===');
-            const contact_id = handleContact(data.resume, webhook_url, user_info);
+            const contact_id = handleContact(data.resume, data.vacancy, webhook_url, user_info);
             console.log('Получен contact_id:', contact_id);
             if (contact_id) {
-                console.log('=== ПЕРЕХОДИМ К ОБРАБОТКЕ СДЕЛКИ ===');
-                handleDeal(data.vacancy, webhook_url, user_info, contact_id);
+                console.log('=== КОНТАКТ ОБРАБОТАН ===');
+                displayStatus('Контакт успешно обработан', 'green');
             } else {
-                console.log('contact_id не получен, пропускаем создание сделки');
+                console.log('contact_id не получен');
             }
         } catch (error) {
             console.error('Ошибка при обработке данных:', error);
@@ -387,7 +402,7 @@ function sendToBitrix(data = null) {
     });
 }
 
-function handleContact(resume, webhook_url, user_info) {
+function handleContact(resume, vacancy, webhook_url, user_info) {
     try {
         // Проверяем наличие телефона
         if (!resume.PHONE || !resume.PHONE[0] || !resume.PHONE[0].VALUE) {
@@ -395,19 +410,47 @@ function handleContact(resume, webhook_url, user_info) {
             return null;
         }
 
+        // Формируем комментарий с информацией о кандидате
+        const comments = buildContactComments(vacancy);
+
         const contactExists = callAjax(`${webhook_url}/crm.contact.list`, {
             filter: { PHONE: resume.PHONE[0].VALUE }
         }, 'post');
 
         if (contactExists?.result?.length) {
             const contact = contactExists.result[0];
-            displayStatus(`Контакт с таким номером уже есть: ${contact.LAST_NAME} ${contact.NAME}`, 'orange');
+            
+            // Обновляем существующий контакт с комментарием
+            const updateData = {
+                id: contact.ID,
+                fields: { 
+                    COMMENTS: comments
+                }
+            };
+            
+            const updated_contact = callAjax(`${webhook_url}/crm.contact.update`, updateData, 'post');
+
+            if (updated_contact?.result) {
+                displayStatus(`Контакт обновлен: ${contact.LAST_NAME} ${contact.NAME}`, 'green');
+            } else {
+                displayStatus("Ошибка обновления контакта.", 'red');
+                if (updated_contact?.error) {
+                    displayStatus(`Ошибка: ${updated_contact.error}`, 'red');
+                }
+            }
             return contact.ID;
         }
 
-        const new_contact = callAjax(`${webhook_url}/crm.contact.add`, {
-            fields: { ...resume, ASSIGNED_BY_ID: user_info.ID }
-        }, 'post');
+        // Создаем новый контакт с комментарием
+        const newContactData = {
+            fields: { 
+                ...resume, 
+                ASSIGNED_BY_ID: user_info.ID,
+                COMMENTS: comments
+            }
+        };
+        
+        const new_contact = callAjax(`${webhook_url}/crm.contact.add`, newContactData, 'post');
 
         if (new_contact?.result) {
             displayStatus(`Контакт успешно создан: ${resume.LAST_NAME} ${resume.NAME}`, 'green');
@@ -415,174 +458,90 @@ function handleContact(resume, webhook_url, user_info) {
         }
 
         displayStatus("Ошибка создания контакта.", 'red');
+        if (new_contact?.error) {
+            displayStatus(`Ошибка: ${new_contact.error}`, 'red');
+        }
+        if (new_contact?.error_description) {
+            displayStatus(`Детали: ${new_contact.error_description}`, 'red');
+        }
         return null;
     } catch (error) {
-        console.error('Ошибка в handleContact:', error);
-        displayStatus("Произошла ошибка при работе с контактом", 'red');
+        displayStatus(`Критическая ошибка: ${error.message}`, 'red');
         return null;
     }
 }
 
-function handleDeal(vacancy, webhook_url, user_info, contact_id) {
-    console.log('=== ВХОД В handleDeal ===');
-    console.log('vacancy.resumeId:', vacancy.resumeId);
-    console.log('contact_id:', contact_id);
+function buildContactComments(vacancy) {
+    let comments = `=== ИНФОРМАЦИЯ О КАНДИДАТЕ ===\n`;
+    comments += `Имя: ${vacancy.resume?.LAST_NAME || ''} ${vacancy.resume?.NAME || ''}\n`;
+    comments += `Возраст: ${vacancy.age || 'не указан'}\n`;
+    comments += `Пол: ${vacancy.gender || 'не указан'}\n`;
+    comments += `Адрес: ${vacancy.address || 'не указан'}\n`;
 
-    try {
-        // СНАЧАЛА проверяем, существует ли уже сделка с таким резюме
-        console.log('Проверяем существование сделки для resumeId:', vacancy.resumeId);
-
-        // Проверяем, что resumeId не пустой
-        if (!vacancy.resumeId || vacancy.resumeId.trim() === '') {
-            console.log('resumeId пустой, пропускаем проверку существования сделки');
-            displayStatus('Не удалось определить ID резюме, создаем сделку без проверки дубликатов', 'orange');
-        } else {
-            console.log('Отправляем запрос на поиск сделки с фильтром:', { UF_CRM_1708209177676: vacancy.resumeId });
-            const dealExists = callAjax(`${webhook_url}/crm.deal.list`, {
-                filter: { UF_CRM_1708209177676: vacancy.resumeId }
-            }, 'post');
-
-            console.log('ПОЛНЫЙ результат проверки существования сделки:', dealExists);
-            console.log('dealExists.result:', dealExists?.result);
-            console.log('Тип dealExists.result:', typeof dealExists?.result);
-            console.log('Длина массива dealExists.result:', dealExists?.result?.length);
-
-            // Более строгая проверка результата
-            if (dealExists &&
-                !dealExists.error &&
-                dealExists.result &&
-                Array.isArray(dealExists.result) &&
-                dealExists.result.length > 0) {
-
-                displayStatus(`Сделка уже существует: ${dealExists.result[0].TITLE}`, 'orange');
-
-                // Формируем поля для обновления
-                const resumeName = vacancy.resume?.LAST_NAME && vacancy.resume?.NAME
-                    ? `${vacancy.resume.LAST_NAME} ${vacancy.resume.NAME}`
-                    : 'Неизвестный кандидат';
-
-                const dealFields = {
-                    TITLE: `${vacancy.vacancyName || 'Вакансия'} / ${resumeName}`,
-                    CONTACT_ID: contact_id,
-                    ASSIGNED_BY_ID: user_info.ID,
-                    UF_CRM_1708209177676: vacancy.resumeId,
-                    COMMENTS: buildDealComments(vacancy),
-                };
-
-                // Предлагаем обновить существующую сделку
-                const updateDeal = confirm("Сделка уже существует. Обновить данные в существующей сделке?");
-                if (updateDeal) {
-                    const dealId = dealExists.result[0].ID;
-                    const updated_deal = callAjax(`${webhook_url}/crm.deal.update`, {
-                        id: dealId,
-                        fields: dealFields
-                    }, 'post');
-
-                    if (updated_deal?.result) {
-                        displayStatus(`Сделка обновлена: ${dealFields.TITLE}`, 'green');
-                    } else {
-                        displayStatus("Ошибка обновления сделки.", 'red');
-                    }
-                }
-                return; // ВЫХОДИМ, не создаем новую сделку
-            } else if (dealExists && dealExists.error) {
-                console.log('Ошибка при проверке существования сделки:', dealExists.error);
-                displayStatus('Ошибка при проверке существования сделки, создаем новую', 'orange');
-            } else {
-                console.log('Сделка не найдена, создаем новую');
-            }
-        }
-
-        // ТОЛЬКО ЕСЛИ сделка не найдена - создаем новую
-        console.log('=== СОЗДАНИЕ НОВОЙ СДЕЛКИ ===');
-
-        // Формируем название сделки более безопасно
-        const resumeName = vacancy.resume?.LAST_NAME && vacancy.resume?.NAME
-            ? `${vacancy.resume.LAST_NAME} ${vacancy.resume.NAME}`
-            : 'Неизвестный кандидат';
-
-        // Подготавливаем поля сделки с правильным маппингом
-        const dealFields = {
-            TITLE: `${vacancy.vacancyName || 'Вакансия'} / ${resumeName}`,
-            CONTACT_ID: contact_id,
-            ASSIGNED_BY_ID: user_info.ID,
-            // Пользовательские поля - нужно уточнить правильные коды полей
-            UF_CRM_1708209177676: vacancy.resumeId, // ID резюме
-            // Добавляем дополнительные поля в комментарии
-            COMMENTS: buildDealComments(vacancy),
-        };
-
-        // Функция для формирования подробных комментариев
-        function buildDealComments(vacancy) {
-            let comments = `=== ИНФОРМАЦИЯ О КАНДИДАТЕ ===\n`;
-            comments += `Имя: ${vacancy.resume?.LAST_NAME || ''} ${vacancy.resume?.NAME || ''}\n`;
-            comments += `Возраст: ${vacancy.age || 'не указан'}\n`;
-            comments += `Пол: ${vacancy.gender || 'не указан'}\n`;
-            comments += `Адрес: ${vacancy.address || 'не указан'}\n`;
-
-            if (vacancy.position && vacancy.position.trim()) {
-                comments += `Желаемая должность: ${vacancy.position}\n`;
-            }
-
-            if (vacancy.salary && vacancy.salary.trim()) {
-                comments += `Желаемая зарплата: ${vacancy.salary}\n`;
-            }
-
-            if (vacancy.languages && vacancy.languages.trim()) {
-                comments += `Языки: ${vacancy.languages}\n`;
-            }
-
-            comments += `Дата обработки: ${vacancy.date}\n`;
-            comments += `Ссылка на резюме: ${vacancy.resumeLink}\n\n`;
-
-            if (vacancy.experience && vacancy.experience.trim()) {
-                comments += `=== ОПЫТ РАБОТЫ ===\n${vacancy.experience}\n\n`;
-            } else {
-                comments += `=== ОПЫТ РАБОТЫ ===\nНе указан\n\n`;
-            }
-
-            if (vacancy.education && vacancy.education.trim()) {
-                comments += `=== ОБРАЗОВАНИЕ ===\n${vacancy.education}\n\n`;
-            } else {
-                comments += `=== ОБРАЗОВАНИЕ ===\nНе указано\n\n`;
-            }
-
-            if (vacancy.skills && vacancy.skills.trim()) {
-                comments += `=== КЛЮЧЕВЫЕ НАВЫКИ ===\n${vacancy.skills}\n\n`;
-            } else {
-                comments += `=== КЛЮЧЕВЫЕ НАВЫКИ ===\nНе указаны\n\n`;
-            }
-
-            if (vacancy.aboutCandidate && vacancy.aboutCandidate.trim()) {
-                comments += `=== О КАНДИДАТЕ ===\n${vacancy.aboutCandidate}\n\n`;
-            }
-
-            if (vacancy.comments && vacancy.comments.trim()) {
-                comments += `=== КОММЕНТАРИИ HR ===\n${vacancy.comments}\n`;
-            }
-
-            return comments;
-        }
-
-
-
-        // Создаем новую сделку
-        console.log('Отправляем данные сделки:', dealFields);
-        const new_deal = callAjax(`${webhook_url}/crm.deal.add`, { fields: dealFields }, 'post');
-        console.log('Полный ответ при создании сделки:', new_deal);
-
-        if (new_deal?.result) {
-            displayStatus(`Сделка успешно создана: ${dealFields.TITLE}`, 'green');
-        } else {
-            displayStatus("Ошибка создания сделки.", 'red');
-            if (new_deal?.error_description) {
-                displayStatus(`Детали ошибки: ${new_deal.error_description}`, 'red');
-            }
-        }
-    } catch (error) {
-        console.error('Ошибка в handleDeal:', error);
-        displayStatus("Произошла ошибка при работе со сделкой", 'red');
+    if (vacancy.position && vacancy.position.trim()) {
+        comments += `Желаемая должность: ${vacancy.position}\n`;
     }
+
+    if (vacancy.salary && vacancy.salary.trim()) {
+        comments += `Желаемая зарплата: ${vacancy.salary}\n`;
+    }
+
+    if (vacancy.languages && vacancy.languages.trim()) {
+        comments += `Языки: ${vacancy.languages}\n`;
+    }
+
+    comments += `Дата обработки: ${vacancy.date}\n`;
+    comments += `Ссылка на резюме: ${vacancy.resumeLink}\n\n`;
+
+    // Сокращаем опыт работы - только последние 3 места
+    if (vacancy.experience && vacancy.experience.trim()) {
+        const experienceLines = vacancy.experience.split('\n\n');
+        const shortExperience = experienceLines.slice(0, 4).join('\n\n'); // Заголовок + 3 места работы
+        comments += `=== ОПЫТ РАБОТЫ ===\n${shortExperience}\n\n`;
+    } else {
+        comments += `=== ОПЫТ РАБОТЫ ===\nНе указан\n\n`;
+    }
+
+    // Сокращаем образование - только основное
+    if (vacancy.education && vacancy.education.trim()) {
+        const educationLines = vacancy.education.split('\n\n');
+        const shortEducation = educationLines.slice(0, 2).join('\n\n'); // Заголовок + основное образование
+        comments += `=== ОБРАЗОВАНИЕ ===\n${shortEducation}\n\n`;
+    } else {
+        comments += `=== ОБРАЗОВАНИЕ ===\nНе указано\n\n`;
+    }
+
+    // Сокращаем навыки - только основные
+    if (vacancy.skills && vacancy.skills.trim()) {
+        const skillsLines = vacancy.skills.split('\n\n');
+        const shortSkills = skillsLines.slice(0, 2).join('\n\n'); // Заголовок + основные навыки
+        comments += `=== КЛЮЧЕВЫЕ НАВЫКИ ===\n${shortSkills}\n\n`;
+    } else {
+        comments += `=== КЛЮЧЕВЫЕ НАВЫКИ ===\nНе указаны\n\n`;
+    }
+
+    // О кандидате - только первые 300 символов
+    if (vacancy.aboutCandidate && vacancy.aboutCandidate.trim()) {
+        const shortAbout = vacancy.aboutCandidate.length > 300 
+            ? vacancy.aboutCandidate.substring(0, 300) + '...'
+            : vacancy.aboutCandidate;
+        comments += `=== О КАНДИДАТЕ ===\n${shortAbout}\n\n`;
+    }
+
+    // HR комментарии - только первые 200 символов
+    if (vacancy.comments && vacancy.comments.trim()) {
+        const shortComments = vacancy.comments.length > 200
+            ? vacancy.comments.substring(0, 200) + '...'
+            : vacancy.comments;
+        comments += `=== КОММЕНТАРИИ HR ===\n${shortComments}\n`;
+    }
+
+    // Проверяем общую длину и обрезаем если нужно
+    if (comments.length > 3000) {
+        comments = comments.substring(0, 2950) + '\n\n[...данные обрезаны...]';
+    }
+
+    return comments;
 }
 
 function callAjax(url, data = null, method = 'post') {
@@ -596,6 +555,7 @@ function callAjax(url, data = null, method = 'post') {
                 if (xhr.status === 200) {
                     try {
                         result = JSON.parse(xhr.responseText);
+                        
                         // Дополнительная проверка структуры ответа Bitrix24
                         if (result && typeof result === 'object') {
                             // Если есть ошибка в ответе Bitrix24
@@ -609,17 +569,16 @@ function callAjax(url, data = null, method = 'post') {
                         }
                     } catch (parseError) {
                         console.error('Ошибка парсинга JSON:', parseError);
-                        console.error('Ответ сервера:', xhr.responseText);
                         result = { error: 'Ошибка парсинга ответа сервера', result: [] };
                     }
                 } else {
                     console.error(`HTTP Error: ${xhr.status} - ${xhr.statusText}`);
-                    console.error('Ответ сервера:', xhr.responseText);
                     result = { error: `HTTP Error: ${xhr.status}`, result: [] };
                 }
             }
         };
         xhr.send(JSON.stringify(data));
+        
     } catch (error) {
         console.error('Ошибка AJAX запроса:', error);
         result = { error: 'Ошибка сетевого запроса', result: [] };
